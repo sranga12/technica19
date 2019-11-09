@@ -1,0 +1,122 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <style>
+        #container {
+            margin: 0px auto;
+            width: 500px;
+            height: 375px;
+            border: 10px #333 solid;
+        }
+
+        #videoElement {
+            width: 500px;
+            height: 375px;
+            background-color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <video autoplay="true" id="videoElement"></video>
+        <img id="yo" src="" />
+    </div>
+    <button class="btn-danger" onclick="stop()">Stop Webcam</button>
+
+    <button class="btn-danger" id="photo_capture">Take Photo</button>
+    <script>
+        var video = document.getElementById("videoElement");
+
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                })
+                .catch(function (error) {
+                    console.log(error.message + "Something went wrong!");
+                });
+        }
+
+        function stop(e) {
+            var stream = video.srcObject;
+            var tracks = stream.getTracks();
+
+            for (var i = 0; i < tracks.length; i++) {
+                var track = tracks[i];
+                track.stop();
+            }
+
+            video.srcObject = null;
+        }
+        const screenshotButton = document.getElementById('photo_capture');
+        var imageURL = "";
+        const canvas = document.createElement('canvas');
+
+        screenshotButton.onclick = video.onclick = function () {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            // Other browsers will fall back to image/png
+            var pic = canvas.toDataURL('image/webp');
+            document.getElementById('yo').src = pic
+            processImage(pic)
+        };
+
+        function handleSuccess(stream) {
+            video.srcObject = stream;
+        }
+        function processImage(sourceImageUrl) {
+            // Replace <Subscription Key> with your valid subscription key.
+            var subscriptionKey = 'f1294c049ee2412993503ad5aae58252';
+
+            var uriBase = 'https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect';
+
+            // Request parameters.
+            var params = {
+                "returnFaceId": "true",
+                "returnFaceLandmarks": "false",
+                "returnFaceAttributes":
+                    "age,gender,headPose,smile,facialHair,glasses,emotion," +
+                    "hair,makeup,occlusion,accessories,blur,exposure,noise"
+            };
+
+            // Perform the REST API call.
+            $.ajax({
+                url: uriBase + "?" + $.param(params),
+
+                // Request headers.
+                beforeSend: function (xhrObj) {
+                    xhrObj.setRequestHeader("Content-Type", "application/json");
+                    xhrObj.setRequestHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
+                },
+
+                type: "POST",
+
+                // Request body.
+                data: '{"url": ' + '"' + sourceImageUrl + '"}',
+            })
+
+                .done(function (data) {
+                    // Show formatted JSON on webpage.
+                    console.log(JSON.stringify(data, null, 2));
+                })
+
+                .fail(function (jqXHR, textStatus, errorThrown) {
+                    // Display error message.
+                    var errorString = (errorThrown === "") ?
+                        "Error. " : errorThrown + " (" + jqXHR.status + "): ";
+                    errorString += (jqXHR.responseText === "") ?
+                        "" : (jQuery.parseJSON(jqXHR.responseText).message) ?
+                            jQuery.parseJSON(jqXHR.responseText).message :
+                            jQuery.parseJSON(jqXHR.responseText).error.message;
+                    alert(errorString);
+                });
+        };
+    </script>
+
+</body>
+</html>
