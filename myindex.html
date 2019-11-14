@@ -22,12 +22,13 @@
 
 <body>
     <div id="container">
-        <video autoplay="true" id="videoElement"></video>
+        <video autoplay id="videoElement"></video>
         <img id="yo" src="" />
     </div>
     <button class="btn-danger" onclick="stop()">Stop Webcam</button>
 
     <button class="btn-danger" id="photo_capture">Take Photo</button>
+    <div id="status"></div>
     <script>
         var video = document.getElementById("videoElement");
 
@@ -61,61 +62,31 @@
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             // Other browsers will fall back to image/png
-            var pic = canvas.toDataURL('image/webp');
-            document.getElementById('yo').src = pic
-            processImage(pic)
-        };
+            var blobData = canvas.toDataURL('image/webp');
+            document.getElementById('yo').src = blobData
+
+            var context = canvas.getContext("2d");
+
+            var imgData = context.getImageData(0, 0, 1000, 600);
+            var data = { "data": imgData.data };
+            postIt(data)
+        }
+
+        function postIt(data) {
+            alert('postitcalled')
+            try {
+                $.post('http://localhost:3000/saveData', data, function (ndata) {
+                    if (ndata.status == 200) {
+                        alert('suicc');
+                    }
+                });
+            } catch (error) { alert(error.message); }
+        }
 
         function handleSuccess(stream) {
             video.srcObject = stream;
         }
-        function processImage(sourceImageUrl) {
-            // Replace <Subscription Key> with your valid subscription key.
-            var subscriptionKey = 'f1294c049ee2412993503ad5aae58252';
 
-            var uriBase = 'https://westcentralus.api.cognitive.microsoft.com/face/v1.0/detect';
-
-            // Request parameters.
-            var params = {
-                "returnFaceId": "true",
-                "returnFaceLandmarks": "false",
-                "returnFaceAttributes":
-                    "age,gender,headPose,smile,facialHair,glasses,emotion," +
-                    "hair,makeup,occlusion,accessories,blur,exposure,noise"
-            };
-
-            // Perform the REST API call.
-            $.ajax({
-                url: uriBase + "?" + $.param(params),
-
-                // Request headers.
-                beforeSend: function (xhrObj) {
-                    xhrObj.setRequestHeader("Content-Type", "application/json");
-                    xhrObj.setRequestHeader("Ocp-Apim-Subscription-Key", subscriptionKey);
-                },
-
-                type: "POST",
-
-                // Request body.
-                data: '{"url": ' + '"' + sourceImageUrl + '"}',
-            })
-
-                .done(function (data) {
-                    // Show formatted JSON on webpage.
-                    console.log(JSON.stringify(data, null, 2));
-                })
-
-                .fail(function (jqXHR, textStatus, errorThrown) {
-                    // Display error message.
-                    var errorString = (errorThrown === "") ?
-                        "Error. " : errorThrown + " (" + jqXHR.status + "): ";
-                    errorString += (jqXHR.responseText === "") ?
-                        "" : (jQuery.parseJSON(jqXHR.responseText).message) ?
-                            jQuery.parseJSON(jqXHR.responseText).message :
-                            jQuery.parseJSON(jqXHR.responseText).error.message;
-                    alert(errorString);
-                });
-        };
     </script>
 
 </body>
